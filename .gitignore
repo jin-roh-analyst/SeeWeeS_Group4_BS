@@ -1,0 +1,35 @@
+# Local agent/project instructions
+AGENTS.md
+
+# Challenge PDFs and local reference docs
+docs/
+
+# Secrets and local environment
+.env
+.env.*
+!.env.example
+.venv/
+venv/
+env/
+
+# Python caches and build artifacts
+__pycache__/
+*.py[cod]
+*$py.class
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# Local vector stores and generated outputs
+chroma_db/
+*.log
+
+# OS/editor files
+.DS_Store
+.idea/
+.vscode/
