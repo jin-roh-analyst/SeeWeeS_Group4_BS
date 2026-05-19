@@ -7,10 +7,13 @@ import {
   ArrowUpRight,
   CheckCircle2,
   ClipboardCheck,
+  CloudLightning,
   GitBranch,
   Map,
+  PackagePlus,
   RefreshCcw,
   ShieldCheck,
+  Snowflake,
   Truck,
   Zap
 } from "lucide-react";
@@ -37,6 +40,19 @@ function statusIcon(status: string) {
   return <CheckCircle2 size={17} />;
 }
 
+const corridorDetails = {
+  boston: {
+    code: "C1_I95_NJ_BOS",
+    label: "Boston",
+    fullName: "I-95 to Boston hospitals"
+  },
+  philly: {
+    code: "C2_NJ_PHL",
+    label: "Philadelphia",
+    fullName: "NJ to Philadelphia hospitals"
+  }
+};
+
 export default function Home() {
   const [selectedId, setSelectedId] = useState(scenarios[0].id);
   const scenario = useMemo(
@@ -47,7 +63,7 @@ export default function Home() {
   const judgeScore = Math.max(12, 100 - Math.round((scenario.disrupted.penaltyScore / 1600) * 54));
   const corridorMode =
     scenario.kind === "weather" ? "weather" : scenario.kind === "resource" ? "resource" : "demand";
-  const corridorPressure =
+  const corridorPressure = // Retained for future detailed corridor views.
     scenario.kind === "weather"
       ? {
           boston: "Risk 3 weather escalation",
@@ -62,6 +78,10 @@ export default function Home() {
             boston: "Tier 1 volume pressure",
             philly: "Demand surge monitored"
           };
+  const RouteIcon =
+    scenario.kind === "weather" ? CloudLightning : scenario.kind === "resource" ? Snowflake : PackagePlus;
+  const bostonActive = scenario.kind === "weather" || scenario.kind === "resource" || scenario.kind === "demand";
+  const phillyActive = scenario.kind === "resource" || scenario.kind === "demand";
 
   return (
     <main className="app-shell">
@@ -98,44 +118,36 @@ export default function Home() {
                   <span className="focus-chip"><ShieldCheck size={17} /> Audit-gated recommendations</span>
                 </div>
               </div>
-              <div className={`corridor-map ${corridorMode}`} aria-label="48-hour corridor network">
+              <div
+                className={`corridor-map ${corridorMode}`}
+                aria-label={`48-hour network from Newark DC to ${corridorDetails.boston.fullName} and ${corridorDetails.philly.fullName}. ${corridorPressure.boston}; ${corridorPressure.philly}.`}
+              >
                 <div className="corridor-title">
-                  <span>48-hour corridor network</span>
-                  <strong>Day0 + Day1</strong>
+                  <span>48h network</span>
                 </div>
-                <div className="network-body">
-                  <div className="origin-node">
-                    <span className="node-icon"><Map size={18} /></span>
-                    <div>
-                      <strong>Newark NJ DC</strong>
-                      <span>Origin distribution center</span>
-                    </div>
+                <div className="mini-network">
+                  <div className="route-node origin" title="Newark NJ distribution center">
+                    <span className="node-icon"><Map size={19} /></span>
+                    <strong>Newark DC</strong>
                   </div>
-                  <div className="network-branches" aria-hidden="true">
-                    <span />
-                    <span />
+
+                  <div className={`route-path path-boston ${bostonActive ? "active" : ""}`} aria-hidden="true" />
+                  <div className={`route-path path-philly ${phillyActive ? "active" : ""}`} aria-hidden="true" />
+
+                  <div
+                    className={`route-node destination boston ${bostonActive ? "active" : ""}`}
+                    title={`${corridorDetails.boston.code}: ${corridorPressure.boston}`}
+                  >
+                    <span className="scenario-badge"><RouteIcon size={18} /></span>
+                    <strong>{corridorDetails.boston.label}</strong>
                   </div>
-                  <div className="corridor-stack">
-                    <div className={`corridor-card boston ${scenario.kind === "weather" ? "active" : ""}`}>
-                      <div>
-                        <span className="corridor-code">C1_I95_NJ_BOS</span>
-                        <strong>I-95 to Boston hospitals</strong>
-                      </div>
-                      <span className={`tag ${scenario.kind === "weather" ? "demand" : "resource"}`}>
-                        {scenario.kind === "weather" ? "Critical" : "High"}
-                      </span>
-                      <p>{corridorPressure.boston}</p>
-                    </div>
-                    <div className={`corridor-card philly ${scenario.kind !== "weather" ? "active" : ""}`}>
-                      <div>
-                        <span className="corridor-code">C2_NJ_PHL</span>
-                        <strong>NJ to Philadelphia hospitals</strong>
-                      </div>
-                      <span className={`tag ${scenario.kind === "demand" ? "resource" : "ok"}`}>
-                        {scenario.kind === "demand" ? "Moderate" : "Stable"}
-                      </span>
-                      <p>{corridorPressure.philly}</p>
-                    </div>
+
+                  <div
+                    className={`route-node destination philly ${phillyActive ? "active" : ""}`}
+                    title={`${corridorDetails.philly.code}: ${corridorPressure.philly}`}
+                  >
+                    <span className="scenario-badge"><RouteIcon size={18} /></span>
+                    <strong>{corridorDetails.philly.label}</strong>
                   </div>
                 </div>
               </div>

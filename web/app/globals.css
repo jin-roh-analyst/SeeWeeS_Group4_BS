@@ -198,9 +198,9 @@ h1 {
 .corridor-map {
   min-height: 232px;
   display: grid;
-  grid-template-rows: auto 1fr;
-  gap: 12px;
-  padding: 14px;
+  grid-template-rows: auto minmax(0, 1fr);
+  gap: 8px;
+  padding: 16px;
   border-radius: 18px;
   border: 1px solid rgba(255, 255, 255, 0.66);
   background:
@@ -212,139 +212,132 @@ h1 {
 .corridor-title {
   display: flex;
   align-items: center;
-  justify-content: space-between;
-  gap: 10px;
+  justify-content: center;
   color: #40384d;
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 900;
   text-transform: uppercase;
 }
 
-.corridor-title strong {
-  min-height: 26px;
-  display: inline-flex;
-  align-items: center;
-  padding: 4px 8px;
-  border-radius: 999px;
-  color: white;
-  background: var(--violet-dark);
-  font-size: 0.7rem;
-  white-space: nowrap;
+.mini-network {
+  position: relative;
+  min-height: 182px;
 }
 
-.network-body {
+.route-node {
+  position: absolute;
+  z-index: 2;
+  width: 88px;
+  min-height: 78px;
   display: grid;
-  grid-template-columns: minmax(116px, 0.8fr) 36px minmax(0, 1.45fr);
-  align-items: center;
-  gap: 6px;
-}
-
-.origin-node {
-  min-height: 92px;
-  display: grid;
-  align-content: center;
-  gap: 10px;
-  padding: 12px;
+  place-items: center;
+  gap: 7px;
+  padding: 10px 8px;
+  border-radius: 15px;
   border: 1px solid var(--line);
-  border-radius: 16px;
-  background: rgba(255, 255, 255, 0.84);
+  background: rgba(255, 255, 255, 0.94);
+  box-shadow: 0 12px 26px rgba(62, 54, 88, 0.1);
+  text-align: center;
 }
 
-.node-icon {
+.route-node strong {
+  color: #2d2638;
+  font-size: 0.8rem;
+  line-height: 1.1;
+}
+
+.route-node.origin {
+  left: 0;
+  top: 50%;
+  transform: translateY(-50%);
+}
+
+.route-node.destination {
+  right: 0;
+}
+
+.route-node.destination.boston {
+  top: 12px;
+}
+
+.route-node.destination.philly {
+  bottom: 12px;
+}
+
+.node-icon,
+.scenario-badge {
   width: 34px;
   height: 34px;
   display: grid;
   place-items: center;
   border-radius: 12px;
   color: white;
+}
+
+.node-icon {
   background: linear-gradient(135deg, var(--teal), var(--violet));
 }
 
-.origin-node strong,
-.corridor-card strong {
-  display: block;
-  line-height: 1.2;
-}
-
-.origin-node span:last-child,
-.corridor-card p {
-  margin: 4px 0 0;
+.scenario-badge {
   color: var(--muted);
-  font-size: 0.76rem;
-  line-height: 1.3;
+  background: rgba(66, 57, 91, 0.09);
+  border: 1px solid rgba(66, 57, 91, 0.08);
 }
 
-.network-branches {
-  position: relative;
-  height: 140px;
+.route-node.destination.active .scenario-badge {
+  color: white;
+  background: linear-gradient(135deg, var(--violet), var(--teal));
+  box-shadow: 0 12px 24px rgba(119, 86, 217, 0.22);
 }
 
-.network-branches::before {
-  content: "";
+.corridor-map.weather .route-node.destination.active .scenario-badge {
+  background: linear-gradient(135deg, var(--blue), var(--violet));
+}
+
+.corridor-map.resource .route-node.destination.active .scenario-badge {
+  background: linear-gradient(135deg, var(--teal), var(--blue));
+}
+
+.corridor-map.demand .route-node.destination.active .scenario-badge {
+  background: linear-gradient(135deg, var(--red), var(--amber));
+}
+
+.route-path {
   position: absolute;
-  left: 0;
-  top: 50%;
-  width: 24px;
-  height: 3px;
+  z-index: 1;
+  left: 86px;
+  right: 86px;
+  height: 4px;
   border-radius: 999px;
-  background: rgba(64, 56, 77, 0.28);
+  background: rgba(66, 57, 91, 0.14);
+  transform-origin: left center;
 }
 
-.network-branches span {
-  position: absolute;
-  left: 22px;
-  width: 28px;
-  height: 55px;
-  border-left: 3px solid rgba(64, 56, 77, 0.24);
-  border-radius: 14px 0 0 14px;
+.route-path.active {
+  background: linear-gradient(90deg, var(--teal), var(--violet));
+  box-shadow: 0 8px 22px rgba(119, 86, 217, 0.16);
 }
 
-.network-branches span:first-child {
-  top: 16px;
-  border-top: 3px solid rgba(64, 56, 77, 0.24);
+.corridor-map.weather .route-path.active {
+  background: linear-gradient(90deg, var(--blue), var(--violet));
 }
 
-.network-branches span:last-child {
-  bottom: 16px;
-  border-bottom: 3px solid rgba(64, 56, 77, 0.24);
+.corridor-map.resource .route-path.active {
+  background: linear-gradient(90deg, var(--teal), var(--blue));
 }
 
-.corridor-stack {
-  display: grid;
-  gap: 10px;
+.corridor-map.demand .route-path.active {
+  background: linear-gradient(90deg, var(--red), var(--amber));
 }
 
-.corridor-card {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px 10px;
-  align-items: start;
-  min-height: 82px;
-  padding: 11px;
-  border-radius: 15px;
-  border: 1px solid var(--line);
-  background: rgba(255, 255, 255, 0.7);
-  transition: transform 160ms ease, border-color 160ms ease, background 160ms ease;
+.path-boston {
+  top: 72px;
+  transform: rotate(-21deg);
 }
 
-.corridor-card.active {
-  transform: translateX(2px);
-  border-color: rgba(119, 86, 217, 0.42);
-  background: rgba(255, 255, 255, 0.94);
-  box-shadow: inset 0 0 0 2px rgba(119, 86, 217, 0.13);
-}
-
-.corridor-card p {
-  grid-column: 1 / -1;
-}
-
-.corridor-code {
-  display: block;
-  margin-bottom: 4px;
-  color: var(--muted);
-  font-size: 0.68rem;
-  font-weight: 900;
-  text-transform: uppercase;
+.path-philly {
+  bottom: 72px;
+  transform: rotate(21deg);
 }
 
 .section-head {
