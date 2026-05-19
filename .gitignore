@@ -29,6 +29,12 @@ dist/
 chroma_db/
 *.log
 
+# Frontend dependencies and build output
+web/node_modules/
+web/.next/
+web/out/
+web/.vercel/
+
 # OS/editor files
 .DS_Store
 .idea/
