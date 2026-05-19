@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import {
   Activity,
   AlertTriangle,
@@ -15,6 +15,7 @@ import {
   ShieldCheck,
   Snowflake,
   Truck,
+  X,
   Zap
 } from "lucide-react";
 import { scenarios, type MetricSet, type Scenario } from "../lib/scenarios";
@@ -55,6 +56,7 @@ const corridorDetails = {
 
 export default function Home() {
   const [selectedId, setSelectedId] = useState(scenarios[0].id);
+  const [isBriefOpen, setIsBriefOpen] = useState(false);
   const scenario = useMemo(
     () => scenarios.find((item) => item.id === selectedId) ?? scenarios[0],
     [selectedId]
@@ -82,6 +84,23 @@ export default function Home() {
     scenario.kind === "weather" ? CloudLightning : scenario.kind === "resource" ? Snowflake : PackagePlus;
   const bostonActive = scenario.kind === "weather" || scenario.kind === "resource" || scenario.kind === "demand";
   const phillyActive = scenario.kind === "resource" || scenario.kind === "demand";
+
+  useEffect(() => {
+    if (!isBriefOpen) return;
+
+    const onKeyDown = (event: KeyboardEvent) => {
+      if (event.key === "Escape") setIsBriefOpen(false);
+    };
+
+    const previousOverflow = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    window.addEventListener("keydown", onKeyDown);
+
+    return () => {
+      document.body.style.overflow = previousOverflow;
+      window.removeEventListener("keydown", onKeyDown);
+    };
+  }, [isBriefOpen]);
 
   return (
     <main className="app-shell">
@@ -292,7 +311,14 @@ export default function Home() {
                   <h2 id="summary-title">Scenario Brief</h2>
                   <p>What the demo is proving.</p>
                 </div>
-                <ArrowUpRight size={20} />
+                <button
+                  type="button"
+                  className="details-button"
+                  aria-label="Open detailed scenario brief"
+                  onClick={() => setIsBriefOpen(true)}
+                >
+                  Details <ArrowUpRight size={15} />
+                </button>
               </div>
               <p className="scenario-summary">
                 <strong>{scenario.name}:</strong> {scenario.summary}
@@ -371,6 +397,91 @@ export default function Home() {
           </aside>
         </div>
       </div>
+      {isBriefOpen ? (
+        <div
+          className="modal-backdrop"
+          role="presentation"
+          onClick={() => setIsBriefOpen(false)}
+        >
+          <section
+            className="brief-modal"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="brief-modal-title"
+            onClick={(event) => event.stopPropagation()}
+          >
+            <div className="modal-head">
+              <div>
+                <p className="eyebrow">{scenario.disruptionType}</p>
+                <h2 id="brief-modal-title">{scenario.name}</h2>
+              </div>
+              <button
+                type="button"
+                className="modal-close"
+                aria-label="Close detailed scenario brief"
+                onClick={() => setIsBriefOpen(false)}
+              >
+                <X size={19} />
+              </button>
+            </div>
+
+            <p className="modal-intro">{scenario.summary}</p>
+
+            <div className="modal-metrics" aria-label="Baseline and disrupted metrics">
+              <div>
+                <span>Baseline</span>
+                <strong>{scenario.baseline.onTimeRate}%</strong>
+                <p>{scenario.baseline.slaRiskUnits} SLA-risk units</p>
+              </div>
+              <div>
+                <span>Disrupted</span>
+                <strong>{scenario.disrupted.onTimeRate}%</strong>
+                <p>{scenario.disrupted.slaRiskUnits} SLA-risk units</p>
+              </div>
+              <div>
+                <span>Penalty shift</span>
+                <strong>{scenario.disrupted.penaltyScore - scenario.baseline.penaltyScore}</strong>
+                <p>incremental penalty points</p>
+              </div>
+            </div>
+
+            <div className="modal-sections">
+              <section>
+                <h3>Agent Flow</h3>
+                <div className="modal-flow">
+                  {scenario.agentTimeline.map((step) => (
+                    <div className="modal-flow-step" key={step.name}>
+                      <span className={`flow-dot ${step.status}`} />
+                      <div>
+                        <strong>{step.name}</strong>
+                        <p>{step.detail}</p>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </section>
+
+              <section>
+                <h3>JudgeAgent Findings</h3>
+                <ul className="modal-list">
+                  {scenario.judgeFindings.map((finding) => (
+                    <li key={finding}>{finding}</li>
+                  ))}
+                </ul>
+              </section>
+
+              <section>
+                <h3>Final Contingency Plan</h3>
+                <ul className="modal-list">
+                  {scenario.contingencyPlan.map((action) => (
+                    <li key={action}>{action}</li>
+                  ))}
+                </ul>
+              </section>
+            </div>
+          </section>
+        </div>
+      ) : null}
     </main>
   );
 }
