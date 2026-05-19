@@ -45,6 +45,23 @@ export default function Home() {
   );
   const Icon = scenario.icon;
   const judgeScore = Math.max(12, 100 - Math.round((scenario.disrupted.penaltyScore / 1600) * 54));
+  const corridorMode =
+    scenario.kind === "weather" ? "weather" : scenario.kind === "resource" ? "resource" : "demand";
+  const corridorPressure =
+    scenario.kind === "weather"
+      ? {
+          boston: "Risk 3 weather escalation",
+          philly: "Low spillover risk"
+        }
+      : scenario.kind === "resource"
+        ? {
+            boston: "Reefer capacity constrained",
+            philly: "Standard capacity protected"
+          }
+        : {
+            boston: "Tier 1 volume pressure",
+            philly: "Demand surge monitored"
+          };
 
   return (
     <main className="app-shell">
@@ -73,7 +90,7 @@ export default function Home() {
                 <p className="eyebrow">Challenge context</p>
                 <h2 id="context-title">Explaining how SeeWeeS agents handle disruption before leadership sees the report.</h2>
                 <p>
-                  The prototype demonstrates the team&apos;s two core focuses: a simulator that changes operational conditions and a fallback loop that lets JudgeAgent reject unsafe or non-compliant plans before the final report is published.
+                  The prototype demonstrates two core focuses: a simulator that changes operational conditions and a fallback loop that lets JudgeAgent reject unsafe or non-compliant plans before the final report is published.
                 </p>
                 <div className="focus-row">
                   <span className="focus-chip"><Zap size={17} /> Baseline vs disrupted KPIs</span>
@@ -81,15 +98,46 @@ export default function Home() {
                   <span className="focus-chip"><ShieldCheck size={17} /> Audit-gated recommendations</span>
                 </div>
               </div>
-              <div className="route-map" aria-label="Conceptual route map">
-                <div className="route-line" />
-                <div className="route-dot one" />
-                <div className="route-dot two" />
-                <div className="route-dot three" />
-                <div className="route-dot four" />
-                <span className="route-label origin">Newark DC</span>
-                <span className="route-label boston">Boston hospitals</span>
-                <span className="route-label philly">Philadelphia hospitals</span>
+              <div className={`corridor-map ${corridorMode}`} aria-label="48-hour corridor network">
+                <div className="corridor-title">
+                  <span>48-hour corridor network</span>
+                  <strong>Day0 + Day1</strong>
+                </div>
+                <div className="network-body">
+                  <div className="origin-node">
+                    <span className="node-icon"><Map size={18} /></span>
+                    <div>
+                      <strong>Newark NJ DC</strong>
+                      <span>Origin distribution center</span>
+                    </div>
+                  </div>
+                  <div className="network-branches" aria-hidden="true">
+                    <span />
+                    <span />
+                  </div>
+                  <div className="corridor-stack">
+                    <div className={`corridor-card boston ${scenario.kind === "weather" ? "active" : ""}`}>
+                      <div>
+                        <span className="corridor-code">C1_I95_NJ_BOS</span>
+                        <strong>I-95 to Boston hospitals</strong>
+                      </div>
+                      <span className={`tag ${scenario.kind === "weather" ? "demand" : "resource"}`}>
+                        {scenario.kind === "weather" ? "Critical" : "High"}
+                      </span>
+                      <p>{corridorPressure.boston}</p>
+                    </div>
+                    <div className={`corridor-card philly ${scenario.kind !== "weather" ? "active" : ""}`}>
+                      <div>
+                        <span className="corridor-code">C2_NJ_PHL</span>
+                        <strong>NJ to Philadelphia hospitals</strong>
+                      </div>
+                      <span className={`tag ${scenario.kind === "demand" ? "resource" : "ok"}`}>
+                        {scenario.kind === "demand" ? "Moderate" : "Stable"}
+                      </span>
+                      <p>{corridorPressure.philly}</p>
+                    </div>
+                  </div>
+                </div>
               </div>
             </section>
 
