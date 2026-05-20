@@ -41,29 +41,47 @@ function riskTagClass(risk: string) {
 function getMonitoringRecommendations(scenario: Scenario) {
   if (scenario.kind === "weather") {
     return [
-      "Track Boston corridor weather and visibility before Day0 release.",
-      "Notify receiving teams if the risk-3 escalation remains active."
+      "Track Boston corridor weather, visibility, and wind thresholds before Day0 release.",
+      "Notify receiving teams if the risk-3 escalation remains active and the buffer changes delivery timing."
     ];
   }
 
   if (scenario.kind === "resource") {
     return [
-      "Monitor reefer availability until both Day0 cold-chain loads are assigned.",
-      "Keep standard trucks focused on room-temperature volume."
+      "Monitor reefer availability until every Day0 cold-chain load has a confirmed equipment assignment.",
+      "Keep standard trucks focused on room-temperature volume so scarce cold-chain capacity stays protected."
     ];
   }
 
   return [
-    "Watch Tier 1 demand pressure across both corridors.",
-    "Recheck driver utilization before the Day1 release window."
+    "Watch Tier 1 demand pressure across both corridors as new shipment rows enter the planning window.",
+    "Recheck driver utilization before the Day1 release window so the fallback plan does not overcommit crews."
   ];
 }
 
 function getTriggerSummary(scenario: Scenario) {
   const rerunStep = scenario.agentTimeline.find((step) => step.status === "rerun");
   return rerunStep
-    ? `${rerunStep.name} triggered fallback: ${rerunStep.detail}`
-    : "JudgeAgent cleared the first planner draft with no rerun required.";
+    ? `${rerunStep.name} triggered fallback after JudgeAgent found a planning rule issue: ${rerunStep.detail}`
+    : "JudgeAgent cleared the first planner draft with no rerun required, so the plan can move straight into the report.";
+}
+
+function getSummaryImpact(scenario: Scenario) {
+  if (scenario.kind === "weather") {
+    return "The business risk is not total shipment volume; it is whether the Boston corridor can still meet Tier 1 service windows under weather escalation.";
+  }
+
+  if (scenario.kind === "resource") {
+    return "The business risk is cold-chain scarcity: the planner must preserve compliant equipment for the highest-penalty shipments first.";
+  }
+
+  return "The business risk is capacity prioritization: the planner must absorb higher Tier 1 demand without hiding residual SLA exposure.";
+}
+
+function getKpiImpactNote(scenario: Scenario) {
+  const onTimeDrop = scenario.baseline.onTimeRate - scenario.disrupted.onTimeRate;
+  const extraRiskUnits = scenario.disrupted.slaRiskUnits - scenario.baseline.slaRiskUnits;
+  return `The simulated disruption lowers on-time performance by ${onTimeDrop} points and adds ${extraRiskUnits} SLA-risk units before the approved contingency plan is applied.`;
 }
 
 const corridorDetails = {
@@ -140,6 +158,9 @@ export default function Home() {
             <div>
               <p className="eyebrow">SeeWeeS Specialty</p>
               <h1>Interactive Dispatch Report</h1>
+              <p className="topline">
+                Compare baseline dispatch, disrupted operations, and the JudgeAgent-approved fallback plan for a 48-hour specialty distribution window.
+              </p>
             </div>
           </div>
           <div className="top-actions">
@@ -181,6 +202,7 @@ export default function Home() {
                 <p>{scenario.summary}</p>
               </div>
             </div>
+            <p className="section-note">{getSummaryImpact(scenario)}</p>
             <div className="summary-grid">
               <div className="summary-card">
                 <span><Icon size={15} /> Disruption</span>
@@ -211,7 +233,9 @@ export default function Home() {
                 <span className="section-number">2</span>
                 <div>
                   <h2 id="monitoring-title">Monitoring Recommendations</h2>
-                  <p>Operational signals to watch before the next 48-hour release.</p>
+                  <p>
+                    These signals explain what operations should keep watching while the scenario is active. They connect the visual corridor state to the practical dispatch decisions leadership would expect in the generated report.
+                  </p>
                 </div>
               </div>
               <ul className="compact-list">
@@ -263,6 +287,9 @@ export default function Home() {
                 <p>{getTriggerSummary(scenario)}</p>
               </div>
             </div>
+            <p className="section-note">
+              Why this matters: the fallback loop turns the scenario from a static what-if into an auditable recommendation that can be rerun before stakeholders see the final report.
+            </p>
             <div className="action-grid">
               {scenario.contingencyPlan.slice(0, 3).map((action, index) => (
                 <div className="action-card" key={action}>
@@ -278,9 +305,12 @@ export default function Home() {
               <span className="section-number">4</span>
               <div>
                 <h2 id="impact-title">KPI Impact Summary</h2>
-                <p>Baseline and disrupted performance for the selected scenario.</p>
+                <p>
+                  Baseline and disrupted performance are shown side by side so the business cost of the selected scenario is visible before opening the full technical brief.
+                </p>
               </div>
             </div>
+            <p className="section-note">{getKpiImpactNote(scenario)}</p>
             <div className="impact-grid">
               <div className="impact-row">
                 <span>On-time rate</span>
