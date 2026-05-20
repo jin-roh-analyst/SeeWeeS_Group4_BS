@@ -157,7 +157,7 @@ export default function Home() {
             </div>
             <div>
               <p className="eyebrow">SeeWeeS Specialty</p>
-              <h1>Interactive Dispatch Report</h1>
+              <h1>Dispatch Report</h1>
               <p className="topline">
                 Compare baseline dispatch, disrupted operations, and the JudgeAgent-approved fallback plan for a 48-hour specialty distribution window.
               </p>
