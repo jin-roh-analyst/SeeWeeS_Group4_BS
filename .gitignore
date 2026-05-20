@@ -27,6 +27,7 @@ dist/
 
 # Local vector stores and generated outputs
 chroma_db/
+outputs/
 *.log
 
 # Frontend dependencies and build output
