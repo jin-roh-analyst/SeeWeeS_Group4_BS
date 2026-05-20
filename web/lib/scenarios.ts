@@ -3,18 +3,21 @@ import {
   CloudLightning,
   type LucideIcon,
   PackagePlus,
-  Snowflake,
-  Truck
+  Truck,
+  Warehouse
 } from "lucide-react";
 
-export type ScenarioKind = "weather" | "resource" | "demand";
+export type ScenarioKind = "weather" | "resource" | "demand" | "closure";
 
 export type MetricSet = {
+  totalShipments: number;
   onTimeRate: number;
-  slaRiskUnits: number;
-  penaltyScore: number;
-  tempTruckUtilization: number;
-  excludedRows: number;
+  lateShipments: number;
+  atRiskShipments: number;
+  coldChainBreachRate: number;
+  criticalHospitalOnTimeRate: number;
+  totalUnitsDispatched: number;
+  capacityUtilization: number;
 };
 
 export type AllocationRow = {
@@ -47,122 +50,31 @@ export type Scenario = {
   contingencyPlan: string[];
 };
 
+const baselineMetrics: MetricSet = {
+  totalShipments: 87,
+  onTimeRate: 72.41,
+  lateShipments: 24,
+  atRiskShipments: 19,
+  coldChainBreachRate: 60,
+  criticalHospitalOnTimeRate: 70.77,
+  totalUnitsDispatched: 1392,
+  capacityUtilization: 32
+};
+
 export const scenarios: Scenario[] = [
   {
-    id: "weather-i95",
-    name: "I-95 Weather Escalation",
-    kind: "weather",
-    icon: CloudLightning,
-    disruptionType: "Severe weather on Boston corridor",
-    summary:
-      "A Day0 storm raises Boston corridor risk to 3. The first planner draft misses the escalation requirement, so JudgeAgent forces a rerun before the report is released.",
-    baseline: {
-      onTimeRate: 94,
-      slaRiskUnits: 3,
-      penaltyScore: 280,
-      tempTruckUtilization: 72,
-      excludedRows: 5
-    },
-    disrupted: {
-      onTimeRate: 82,
-      slaRiskUnits: 9,
-      penaltyScore: 1040,
-      tempTruckUtilization: 88,
-      excludedRows: 5
-    },
-    allocation: [
-      { day: "Day0", corridor: "C1_I95_NJ_BOS", drivers: 4, standardTrucks: 2, tempTrucks: 2, risk: "Critical" },
-      { day: "Day0", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 0, risk: "Low" },
-      { day: "Day1", corridor: "C1_I95_NJ_BOS", drivers: 3, standardTrucks: 1, tempTrucks: 1, risk: "Moderate" },
-      { day: "Day1", corridor: "C2_NJ_PHL", drivers: 3, standardTrucks: 3, tempTrucks: 1, risk: "Low" }
-    ],
-    agentTimeline: [
-      { name: "ContextAgent", status: "complete", detail: "Loaded SLA, risk score, cold-chain, and escalation rules." },
-      { name: "ScenarioAgent", status: "complete", detail: "Applied storm disruption to C1 Day0 waypoints." },
-      { name: "PlannerAgent", status: "rerun", detail: "Initial plan failed to escalate risk score 3." },
-      { name: "JudgeAgent", status: "approved", detail: "Approved rerun with 40 percent buffer and escalation note." },
-      { name: "ReportAgent", status: "complete", detail: "Published leadership summary with residual SLA exposure." }
-    ],
-    judgeFindings: [
-      "Risk score 3 requires 40 percent buffer plus escalation.",
-      "Tier 1 Boston units must be prioritized before standard specialty volume.",
-      "Report must state residual SLA risk after the rerun."
-    ],
-    contingencyPlan: [
-      "Escalate C1 Day0 to operations leadership and hospital receiving teams.",
-      "Reserve both Day0 temperature-controlled trucks for Boston cold-chain Tier 1 units.",
-      "Move flexible Philadelphia standard specialty volume to later dispatch windows.",
-      "Monitor Providence and New Haven waypoint risk before final release."
-    ]
-  },
-  {
-    id: "reefer-shortage",
-    name: "Cold-Chain Truck Shortage",
-    kind: "resource",
-    icon: Snowflake,
-    disruptionType: "One reefer truck unavailable",
-    summary:
-      "A temperature-controlled truck goes offline. The dashboard shows cold-chain pressure, revised allocation, and the lowest-penalty plan across both corridors.",
-    baseline: {
-      onTimeRate: 94,
-      slaRiskUnits: 3,
-      penaltyScore: 280,
-      tempTruckUtilization: 72,
-      excludedRows: 5
-    },
-    disrupted: {
-      onTimeRate: 86,
-      slaRiskUnits: 7,
-      penaltyScore: 820,
-      tempTruckUtilization: 100,
-      excludedRows: 5
-    },
-    allocation: [
-      { day: "Day0", corridor: "C1_I95_NJ_BOS", drivers: 3, standardTrucks: 1, tempTrucks: 1, risk: "High" },
-      { day: "Day0", corridor: "C2_NJ_PHL", drivers: 3, standardTrucks: 3, tempTrucks: 0, risk: "Moderate" },
-      { day: "Day1", corridor: "C1_I95_NJ_BOS", drivers: 3, standardTrucks: 2, tempTrucks: 1, risk: "Moderate" },
-      { day: "Day1", corridor: "C2_NJ_PHL", drivers: 3, standardTrucks: 2, tempTrucks: 0, risk: "Moderate" }
-    ],
-    agentTimeline: [
-      { name: "OpsDataAgent", status: "complete", detail: "Separated cold-chain and room-temp units by corridor." },
-      { name: "ScenarioAgent", status: "complete", detail: "Reduced temp-controlled availability from 2 to 1." },
-      { name: "PlannerAgent", status: "complete", detail: "Minimized penalty by protecting Tier 1 cold-chain shipments." },
-      { name: "JudgeAgent", status: "approved", detail: "No cold-chain shipment assigned to standard-only equipment." },
-      { name: "ReportAgent", status: "complete", detail: "Summarized backlog and mitigation plan for leadership." }
-    ],
-    judgeFindings: [
-      "Cold-chain units cannot be placed on standard trucks.",
-      "Penalty model favors Tier 1 cold-chain preservation before non-SLA delays.",
-      "Remaining backlog must be disclosed by corridor and day."
-    ],
-    contingencyPlan: [
-      "Protect Boston Tier 1 cold-chain demand with the remaining reefer truck.",
-      "Delay non-SLA or Tier 2 cold-chain volume where hospital window allows.",
-      "Use standard trucks for room-temperature Philadelphia volume to avoid unused capacity.",
-      "Request backup reefer capacity from third-party carrier before Day1 cutoff."
-    ]
-  },
-  {
     id: "demand-spike",
-    name: "Tier 1 Demand Spike",
+    name: "Demand Spike",
     kind: "demand",
     icon: PackagePlus,
-    disruptionType: "20 percent demand increase",
+    disruptionType: "Demand Spike x1.2",
     summary:
-      "Demand rises across the 48-hour window with extra Tier 1 pressure. The dashboard compares baseline and disrupted performance and shows how the planner reallocates scarce capacity.",
-    baseline: {
-      onTimeRate: 94,
-      slaRiskUnits: 3,
-      penaltyScore: 280,
-      tempTruckUtilization: 72,
-      excludedRows: 5
-    },
+      "The teammate pipeline increases shipment quantity by 20 percent. On-time performance stays flat in the deterministic run, but total units and capacity utilization rise, creating a planning pressure point before the final dispatch recommendation.",
+    baseline: baselineMetrics,
     disrupted: {
-      onTimeRate: 79,
-      slaRiskUnits: 12,
-      penaltyScore: 1380,
-      tempTruckUtilization: 96,
-      excludedRows: 6
+      ...baselineMetrics,
+      totalUnitsDispatched: 1634,
+      capacityUtilization: 37.56
     },
     allocation: [
       { day: "Day0", corridor: "C1_I95_NJ_BOS", drivers: 4, standardTrucks: 2, tempTrucks: 2, risk: "High" },
@@ -171,22 +83,145 @@ export const scenarios: Scenario[] = [
       { day: "Day1", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 1, risk: "Moderate" }
     ],
     agentTimeline: [
-      { name: "OpsDataAgent", status: "complete", detail: "Computed baseline corridor and Day0/Day1 demand mix." },
-      { name: "ScenarioAgent", status: "complete", detail: "Applied 20 percent unit growth with Tier 1 weighting." },
-      { name: "StakeholderSim", status: "complete", detail: "Modeled hospital priority pressure for life-critical items." },
-      { name: "PlannerAgent", status: "rerun", detail: "First plan overused shared drivers on Day1." },
-      { name: "JudgeAgent", status: "approved", detail: "Approved rerun after driver counts were corrected." }
+      { name: "CSV Analysis", status: "complete", detail: "Computed baseline KPIs from 87 shipment rows." },
+      { name: "What-If Simulation", status: "complete", detail: "Applied demand_spike with multiplier 1.2 to quantity_ordered." },
+      { name: "Stakeholder Sim", status: "complete", detail: "Modeled priority-1 hospital and operations concerns." },
+      { name: "PlannerAgent", status: "complete", detail: "Built a recovery plan around capacity pressure and priority shipments." },
+      { name: "JudgeAgent", status: "approved", detail: "Audited the plan before executive report generation." }
     ],
     judgeFindings: [
-      "Day1 driver allocation exceeded the available pool in the first plan.",
-      "Tier 1 impacted units are the tie-breaker after total penalty score.",
-      "Data-quality exclusions increased by one generated demand row and must be reported."
+      "Demand spike changes unit volume and capacity utilization, not lateness in the deterministic handler.",
+      "Priority-1 hospital shipments remain the tie-breaker when capacity becomes constrained.",
+      "The report should call out that cold-chain breach rate remains 60 percent in this scenario."
     ],
     contingencyPlan: [
-      "Prioritize Tier 1 cold-chain shipments on Boston and split remaining capacity by penalty impact.",
-      "Backlog Tier 2 room-temperature shipments with lowest SLA exposure.",
-      "Ask hospital stakeholders to confirm substitution flexibility for endocrine cold-chain items.",
-      "Use JudgeAgent output as the final report gate before executive release."
+      "Protect priority-1 hospital shipments before assigning incremental demand to lower-risk volume.",
+      "Use the capacity utilization increase as the trigger for early carrier confirmation.",
+      "Escalate any new cold-chain volume that cannot be assigned compliant equipment.",
+      "Keep the JudgeAgent audit as the final gate before releasing the executive report."
+    ]
+  },
+  {
+    id: "driver-shortage",
+    name: "Driver Shortage",
+    kind: "resource",
+    icon: Truck,
+    disruptionType: "Driver Shortage: 30% unavailable",
+    summary:
+      "The teammate pipeline delays the first 30 percent of shipment rows by four hours. This reduces on-time performance and materially increases at-risk priority shipments, making driver coverage the main operational constraint.",
+    baseline: baselineMetrics,
+    disrupted: {
+      ...baselineMetrics,
+      onTimeRate: 52.87,
+      lateShipments: 41,
+      atRiskShipments: 35,
+      criticalHospitalOnTimeRate: 46.15
+    },
+    allocation: [
+      { day: "Day0", corridor: "C1_I95_NJ_BOS", drivers: 3, standardTrucks: 2, tempTrucks: 2, risk: "Critical" },
+      { day: "Day0", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 0, risk: "Moderate" },
+      { day: "Day1", corridor: "C1_I95_NJ_BOS", drivers: 3, standardTrucks: 2, tempTrucks: 1, risk: "High" },
+      { day: "Day1", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 1, risk: "Moderate" }
+    ],
+    agentTimeline: [
+      { name: "CSV Analysis", status: "complete", detail: "Loaded baseline dispatch and cold-chain KPI profile." },
+      { name: "What-If Simulation", status: "complete", detail: "Applied driver_shortage with 30 percent unavailable drivers." },
+      { name: "Stakeholder Sim", status: "complete", detail: "Surfaced hospital, dispatcher, driver, compliance, and CFO concerns." },
+      { name: "PlannerAgent", status: "rerun", detail: "Initial plan required audit attention around priority-1 lateness exposure." },
+      { name: "JudgeAgent", status: "approved", detail: "Approved the corrected plan after rule validation." }
+    ],
+    judgeFindings: [
+      "At-risk shipments rise from 19 to 35 under the driver shortage scenario.",
+      "Critical-hospital on-time performance falls from 70.77 percent to 46.15 percent.",
+      "Cold-chain breach rate remains unchanged, so the report should not attribute compliance improvement to this scenario."
+    ],
+    contingencyPlan: [
+      "Reassign available drivers to priority-1 Boston hospital loads first.",
+      "Defer lower-priority specialty shipments that can tolerate later delivery windows.",
+      "Escalate driver coverage gaps before the Day0 release cutoff.",
+      "Require JudgeAgent confirmation that any revised route respects priority-1 SLA rules."
+    ]
+  },
+  {
+    id: "warehouse-closure",
+    name: "Warehouse Closure",
+    kind: "closure",
+    icon: Warehouse,
+    disruptionType: "Warehouse Closure: Boston-MGH",
+    summary:
+      "The teammate pipeline adds a four-hour delay to shipments dispatched from Boston-MGH. This creates the largest non-weather deterioration in the local result set, especially for priority-1 hospital service.",
+    baseline: baselineMetrics,
+    disrupted: {
+      ...baselineMetrics,
+      onTimeRate: 41.38,
+      lateShipments: 51,
+      atRiskShipments: 46,
+      criticalHospitalOnTimeRate: 29.23
+    },
+    allocation: [
+      { day: "Day0", corridor: "C1_I95_NJ_BOS", drivers: 4, standardTrucks: 2, tempTrucks: 2, risk: "Critical" },
+      { day: "Day0", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 0, risk: "Moderate" },
+      { day: "Day1", corridor: "C1_I95_NJ_BOS", drivers: 4, standardTrucks: 2, tempTrucks: 1, risk: "High" },
+      { day: "Day1", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 1, risk: "Low" }
+    ],
+    agentTimeline: [
+      { name: "CSV Analysis", status: "complete", detail: "Identified Boston-MGH as a priority-1 dispatch location." },
+      { name: "What-If Simulation", status: "complete", detail: "Applied warehouse_closure to Boston-MGH shipments." },
+      { name: "Stakeholder Sim", status: "complete", detail: "Prioritized hospital receiving and warehouse recovery concerns." },
+      { name: "PlannerAgent", status: "rerun", detail: "Fallback planning focused on the priority-1 service collapse." },
+      { name: "JudgeAgent", status: "approved", detail: "Approved plan after routing and escalation checks." }
+    ],
+    judgeFindings: [
+      "At-risk shipments rise from 19 to 46 when Boston-MGH shipments are delayed.",
+      "Critical-hospital on-time performance falls to 29.23 percent.",
+      "The report should emphasize warehouse continuity and hospital communication rather than generic volume growth."
+    ],
+    contingencyPlan: [
+      "Escalate Boston-MGH closure impact to operations leadership and hospital receiving teams.",
+      "Prioritize alternate dispatch handling for priority-1 hospital shipments.",
+      "Hold lower-risk shipments until the warehouse recovery window is confirmed.",
+      "Use JudgeAgent validation to confirm the revised plan addresses priority-1 SLA exposure."
+    ]
+  },
+  {
+    id: "weather-event",
+    name: "Weather Event",
+    kind: "weather",
+    icon: CloudLightning,
+    disruptionType: "Weather Event: risk 2/3",
+    summary:
+      "The teammate pipeline applies a three-hour delay across the scenario when weather risk is set to 2. In the deterministic results, this pushes every shipment late and makes all priority-1 shipments at risk.",
+    baseline: baselineMetrics,
+    disrupted: {
+      ...baselineMetrics,
+      onTimeRate: 0,
+      lateShipments: 87,
+      atRiskShipments: 65,
+      criticalHospitalOnTimeRate: 0
+    },
+    allocation: [
+      { day: "Day0", corridor: "C1_I95_NJ_BOS", drivers: 4, standardTrucks: 2, tempTrucks: 2, risk: "Critical" },
+      { day: "Day0", corridor: "C2_NJ_PHL", drivers: 2, standardTrucks: 2, tempTrucks: 0, risk: "High" },
+      { day: "Day1", corridor: "C1_I95_NJ_BOS", drivers: 3, standardTrucks: 1, tempTrucks: 1, risk: "Critical" },
+      { day: "Day1", corridor: "C2_NJ_PHL", drivers: 3, standardTrucks: 3, tempTrucks: 1, risk: "High" }
+    ],
+    agentTimeline: [
+      { name: "Weather Risk", status: "complete", detail: "Evaluated route weather exposure before scenario simulation." },
+      { name: "What-If Simulation", status: "complete", detail: "Applied weather_event with risk score 2 and a three-hour delay." },
+      { name: "Stakeholder Sim", status: "complete", detail: "Raised hospital, driver safety, compliance, and cost concerns." },
+      { name: "PlannerAgent", status: "rerun", detail: "Initial plan required stronger escalation for full late-shipment exposure." },
+      { name: "JudgeAgent", status: "approved", detail: "Approved the corrected plan after weather-risk validation." }
+    ],
+    judgeFindings: [
+      "On-time rate falls from 72.41 percent to 0 percent under the risk-2 weather delay.",
+      "All 65 priority-1 hospital shipments become at-risk in the scenario output.",
+      "Cold-chain breach rate remains 60 percent, so weather impact should be framed around timing and risk escalation."
+    ],
+    contingencyPlan: [
+      "Escalate the weather event before dispatch release and confirm hospital receiving windows.",
+      "Prioritize priority-1 shipments for earliest safe departure once weather risk clears.",
+      "Communicate full late-shipment exposure in the executive report rather than masking residual risk.",
+      "Use JudgeAgent to confirm the final plan includes weather-risk escalation language."
     ]
   }
 ];
@@ -194,5 +229,6 @@ export const scenarios: Scenario[] = [
 export const scenarioIcons = {
   weather: CloudLightning,
   resource: Truck,
-  demand: AlertTriangle
+  demand: AlertTriangle,
+  closure: Warehouse
 };

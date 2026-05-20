@@ -6,13 +6,13 @@ import {
   AlertTriangle,
   ArrowUpRight,
   CheckCircle2,
-  ClipboardCheck,
   CloudLightning,
   Map,
   PackagePlus,
   RefreshCcw,
   ShieldCheck,
-  Snowflake,
+  Truck,
+  Warehouse,
   X
 } from "lucide-react";
 import { scenarios, type Scenario } from "../lib/scenarios";
@@ -22,7 +22,9 @@ function formatValue(value: number, suffix: string) {
 }
 
 function riskClass(kind: Scenario["kind"]) {
-  return kind === "weather" ? "weather" : kind === "resource" ? "resource" : "demand";
+  if (kind === "weather") return "weather";
+  if (kind === "demand") return "demand";
+  return "resource";
 }
 
 function statusIcon(status: string) {
@@ -41,21 +43,28 @@ function riskTagClass(risk: string) {
 function getMonitoringRecommendations(scenario: Scenario) {
   if (scenario.kind === "weather") {
     return [
-      "Track Boston corridor weather, visibility, and wind thresholds before Day0 release.",
-      "Notify receiving teams if the risk-3 escalation remains active and the buffer changes delivery timing."
+      "Track route weather and risk-score changes before releasing the 48-hour dispatch plan.",
+      "Notify hospital receiving teams that the risk-2 scenario makes all priority-1 shipments timing-sensitive."
     ];
   }
 
   if (scenario.kind === "resource") {
     return [
-      "Monitor reefer availability until every Day0 cold-chain load has a confirmed equipment assignment.",
-      "Keep standard trucks focused on room-temperature volume so scarce cold-chain capacity stays protected."
+      "Monitor driver coverage before Day0 release because the shortage pushes at-risk shipments from 19 to 35.",
+      "Recheck priority-1 hospital assignments before approving any lower-priority dispatch moves."
+    ];
+  }
+
+  if (scenario.kind === "closure") {
+    return [
+      "Track Boston-MGH recovery status because the closure scenario pushes at-risk shipments from 19 to 46.",
+      "Confirm alternate handling for priority-1 shipments before lower-risk volume is released."
     ];
   }
 
   return [
-    "Watch Tier 1 demand pressure across both corridors as new shipment rows enter the planning window.",
-    "Recheck driver utilization before the Day1 release window so the fallback plan does not overcommit crews."
+    "Watch capacity utilization as the demand multiplier raises dispatched units from 1,392 to 1,634.",
+    "Confirm incremental demand does not hide the existing 60 percent cold-chain breach rate."
   ];
 }
 
@@ -68,20 +77,28 @@ function getTriggerSummary(scenario: Scenario) {
 
 function getSummaryImpact(scenario: Scenario) {
   if (scenario.kind === "weather") {
-    return "The business risk is not total shipment volume; it is whether the Boston corridor can still meet Tier 1 service windows under weather escalation.";
+    return "The business risk is timing collapse: the teammate scenario applies a three-hour weather delay that makes every shipment late in the deterministic result.";
   }
 
   if (scenario.kind === "resource") {
-    return "The business risk is cold-chain scarcity: the planner must preserve compliant equipment for the highest-penalty shipments first.";
+    return "The business risk is driver coverage: fewer available drivers sharply reduces priority-1 hospital on-time performance.";
   }
 
-  return "The business risk is capacity prioritization: the planner must absorb higher Tier 1 demand without hiding residual SLA exposure.";
+  if (scenario.kind === "closure") {
+    return "The business risk is continuity at Boston-MGH: a local closure delay creates severe priority-1 exposure even though total shipment volume is unchanged.";
+  }
+
+  return "The business risk is capacity pressure: the demand spike raises dispatched units and utilization while the lateness and cold-chain breach profile remains unchanged.";
 }
 
 function getKpiImpactNote(scenario: Scenario) {
   const onTimeDrop = scenario.baseline.onTimeRate - scenario.disrupted.onTimeRate;
-  const extraRiskUnits = scenario.disrupted.slaRiskUnits - scenario.baseline.slaRiskUnits;
-  return `The simulated disruption lowers on-time performance by ${onTimeDrop} points and adds ${extraRiskUnits} SLA-risk units before the approved contingency plan is applied.`;
+  const extraRiskShipments = scenario.disrupted.atRiskShipments - scenario.baseline.atRiskShipments;
+  const unitShift = scenario.disrupted.totalUnitsDispatched - scenario.baseline.totalUnitsDispatched;
+  if (unitShift > 0 && onTimeDrop === 0) {
+    return `The simulated disruption keeps on-time performance at ${scenario.disrupted.onTimeRate}% but adds ${unitShift.toLocaleString()} units and raises capacity utilization to ${scenario.disrupted.capacityUtilization}%.`;
+  }
+  return `The simulated disruption lowers on-time performance by ${onTimeDrop.toFixed(2)} points and adds ${extraRiskShipments} at-risk shipments before the approved contingency plan is applied.`;
 }
 
 const corridorDetails = {
@@ -106,28 +123,38 @@ export default function Home() {
   );
   const Icon = scenario.icon;
   const corridorMode =
-    scenario.kind === "weather" ? "weather" : scenario.kind === "resource" ? "resource" : "demand";
+    scenario.kind === "weather" ? "weather" : scenario.kind === "demand" ? "demand" : "resource";
   const corridorPressure = // Retained for future detailed corridor views.
     scenario.kind === "weather"
       ? {
-          boston: "Risk 3 weather escalation",
-          philly: "Low spillover risk"
+          boston: "Risk-2 weather delay",
+          philly: "Weather timing exposure"
         }
       : scenario.kind === "resource"
         ? {
-            boston: "Reefer capacity constrained",
-            philly: "Standard capacity protected"
+            boston: "Driver coverage constrained",
+            philly: "Driver coverage monitored"
           }
+        : scenario.kind === "closure"
+          ? {
+              boston: "Boston-MGH closure exposure",
+              philly: "Spillover monitored"
+            }
         : {
-            boston: "Tier 1 volume pressure",
-            philly: "Demand surge monitored"
+            boston: "Demand volume pressure",
+            philly: "Capacity utilization monitored"
           };
   const RouteIcon =
-    scenario.kind === "weather" ? CloudLightning : scenario.kind === "resource" ? Snowflake : PackagePlus;
-  const bostonActive = scenario.kind === "weather" || scenario.kind === "resource" || scenario.kind === "demand";
-  const phillyActive = scenario.kind === "resource" || scenario.kind === "demand";
+    scenario.kind === "weather"
+      ? CloudLightning
+      : scenario.kind === "resource"
+        ? Truck
+        : scenario.kind === "closure"
+          ? Warehouse
+          : PackagePlus;
+  const bostonActive = scenario.kind === "weather" || scenario.kind === "resource" || scenario.kind === "demand" || scenario.kind === "closure";
+  const phillyActive = scenario.kind === "weather" || scenario.kind === "resource" || scenario.kind === "demand";
   const monitoringRecommendations = getMonitoringRecommendations(scenario);
-  const penaltyShift = scenario.disrupted.penaltyScore - scenario.baseline.penaltyScore;
   const judgeResult = scenario.agentTimeline.some((item) => item.status === "rerun") ? "Rerun approved" : "Clear";
 
   useEffect(() => {
@@ -159,7 +186,7 @@ export default function Home() {
               <p className="eyebrow">SeeWeeS Specialty</p>
               <h1>Dispatch Report</h1>
               <p className="topline">
-                Compare baseline dispatch, disrupted operations, and the JudgeAgent-approved fallback plan for a 48-hour specialty distribution window.
+                Compare baseline dispatch, teammate what-if results, and the JudgeAgent-approved fallback plan for a 48-hour specialty distribution window.
               </p>
             </div>
           </div>
@@ -212,12 +239,12 @@ export default function Home() {
               <div className="summary-card">
                 <span><CheckCircle2 size={15} /> Baseline</span>
                 <strong>{scenario.baseline.onTimeRate}%</strong>
-                <p>{scenario.baseline.slaRiskUnits} units at SLA risk</p>
+                <p>{scenario.baseline.atRiskShipments} at-risk shipments</p>
               </div>
               <div className="summary-card">
                 <span><AlertTriangle size={15} /> Disrupted</span>
                 <strong>{scenario.disrupted.onTimeRate}%</strong>
-                <p>{scenario.disrupted.slaRiskUnits} units at SLA risk</p>
+                <p>{scenario.disrupted.atRiskShipments} at-risk shipments</p>
               </div>
               <div className="summary-card">
                 <span><ShieldCheck size={15} /> JudgeAgent</span>
@@ -317,16 +344,16 @@ export default function Home() {
                 <strong>{scenario.baseline.onTimeRate}% → {scenario.disrupted.onTimeRate}%</strong>
               </div>
               <div className="impact-row">
-                <span>SLA risk units</span>
-                <strong>{scenario.baseline.slaRiskUnits} → {scenario.disrupted.slaRiskUnits}</strong>
+                <span>At-risk shipments</span>
+                <strong>{scenario.baseline.atRiskShipments} → {scenario.disrupted.atRiskShipments}</strong>
               </div>
               <div className="impact-row">
-                <span>Penalty score</span>
-                <strong>{formatValue(scenario.baseline.penaltyScore, "")} → {formatValue(scenario.disrupted.penaltyScore, "")}</strong>
+                <span>Late shipments</span>
+                <strong>{formatValue(scenario.baseline.lateShipments, "")} → {formatValue(scenario.disrupted.lateShipments, "")}</strong>
               </div>
               <div className="impact-row">
-                <span>Temp-truck utilization</span>
-                <strong>{scenario.baseline.tempTruckUtilization}% → {scenario.disrupted.tempTruckUtilization}%</strong>
+                <span>Capacity utilization</span>
+                <strong>{scenario.baseline.capacityUtilization}% → {scenario.disrupted.capacityUtilization}%</strong>
               </div>
             </div>
           </section>
@@ -366,17 +393,17 @@ export default function Home() {
               <div>
                 <span>Baseline</span>
                 <strong>{scenario.baseline.onTimeRate}%</strong>
-                <p>{scenario.baseline.slaRiskUnits} SLA-risk units</p>
+                <p>{scenario.baseline.atRiskShipments} at-risk shipments</p>
               </div>
               <div>
                 <span>Disrupted</span>
                 <strong>{scenario.disrupted.onTimeRate}%</strong>
-                <p>{scenario.disrupted.slaRiskUnits} SLA-risk units</p>
+                <p>{scenario.disrupted.atRiskShipments} at-risk shipments</p>
               </div>
               <div>
-                <span>Penalty shift</span>
-                <strong>{scenario.disrupted.penaltyScore - scenario.baseline.penaltyScore}</strong>
-                <p>incremental penalty points</p>
+                <span>Cold-chain breach</span>
+                <strong>{scenario.disrupted.coldChainBreachRate}%</strong>
+                <p>unchanged in teammate what-if handler</p>
               </div>
             </div>
 
